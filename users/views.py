@@ -95,11 +95,6 @@ class CreateUsernameView(APIView):
 					"You already have a username",
 					HTTP_400_BAD_REQUEST
 				)
-			if user.username == username:
-				return APIFailure(
-					"You cannot change your username to your current username",
-					HTTP_400_BAD_REQUEST
-				)
 
 			user.username = username
 			user.save()
