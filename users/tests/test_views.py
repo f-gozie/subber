@@ -6,6 +6,7 @@ from rest_framework.test import APITestCase
 from rest_framework.authtoken.models import Token
 
 from users.models import User
+from accounts.models import Account
 
 
 class LoginViewTest(APITestCase):
@@ -102,6 +103,16 @@ class SignUpViewTest(APITestCase):
 		response = self.client.post(self.url, self.auth_data)
 		token_format = r'^\w+$'
 		self.assertRegex(response.data['data']['token'], token_format)
+
+	def test_accounts_creation(self):
+		'''
+			Test Case: Ensure that user accounts (ngn and usd) are created alongside user creation
+			Expected Result: 2 accounts associated with the user
+		'''
+		user = User.objects.create_user(**self.auth_data)
+		accounts = Account.objects.filter(user=user)
+		self.assertEqual(len(accounts), 2)
+		self.assertEqual(set([account.get_currency_display() for account in accounts]), set(['ngn', 'usd']))
 
 
 class CreateUsernameViewTest(APITestCase):
