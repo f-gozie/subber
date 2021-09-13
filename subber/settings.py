@@ -139,3 +139,6 @@ REST_FRAMEWORK = {
          'users.authentication.TokenAuthentication',
      ),
 }
+
+REDIS_HOST = config('REDIS_HOST')
+REDIS_PORT = config('REDIS_PORT', cast=int)

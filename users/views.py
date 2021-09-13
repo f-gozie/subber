@@ -19,7 +19,25 @@ from .models import User
 from .serializers import UserSerializer
 from services.notification.sendgrid import send_email
 from utils import APISuccess, APIFailure
-from utils.helpers import generate_otp
+from utils.helpers import generate_otp, redis_instance
+
+class ResendOTPView(APIView):
+	permission_classes = (IsAuthenticated, )
+
+	def post(self, request):
+		user = request.user
+		if user.email_verified:
+			return APIFailure(
+				"Your email is already verified",
+				HTTP_400_BAD_REQUEST
+			)
+		email = user.email
+		otp_code = generate_otp(4)
+		redis_instance.hmset(email, {'otp': otp_code})
+		redis_instance.expire(email, 300)
+		send_email(to=email, otp_code=otp_code)
+
+		return APISuccess('OTP sent successfully')
 
 
 class SignUpView(APIView):
@@ -31,6 +49,8 @@ class SignUpView(APIView):
 		if serializer.is_valid():
 			email = serializer.validated_data.get('email')
 			otp_code = generate_otp(4)
+			redis_instance.hmset(email, {'otp': otp_code})
+			redis_instance.expire(email, 300)
 			send_email(to=email, otp_code=otp_code)
 			user = serializer.save()
 			if user:
@@ -113,3 +133,40 @@ class CreateUsernameView(APIView):
 				"There is already a user with this username",
 				HTTP_400_BAD_REQUEST
 			)
+
+class VerifyEmailView(APIView):
+	permission_classes = (IsAuthenticated, )
+
+	def post(self, request):
+		otp_code = request.data.get('otp')
+		user = request.user
+		email = user.email
+		if user.email_verified:
+			return APIFailure(
+				"Your email is already verified",
+				HTTP_400_BAD_REQUEST
+			)
+
+		try:
+			redis_og_otp_code = redis_instance.hmget(email, 'otp')
+			og_otp_code = str(redis_og_otp_code[0].decode('utf-8'))
+			if og_otp_code == otp_code:
+				user.email_verified = True
+				user.save()
+				return APISuccess(
+					'Email address verified successfully'
+				)
+			else:
+				return APIFailure(
+					'Invalid OTP code',
+					HTTP_400_BAD_REQUEST
+				)
+		except:
+			return APIFailure(
+				'OTP code expired or invalid',
+				HTTP_400_BAD_REQUEST
+			)
+
+
+
+				

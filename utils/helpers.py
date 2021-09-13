@@ -1,5 +1,7 @@
 import string
 import random
+from django.conf import settings
+import redis
 
 
 def generate_random_id(length):
@@ -18,3 +20,6 @@ def generate_public_id(parent, key, length=8):
 def generate_otp(length=4):
 	letters = string.ascii_uppercase
 	return ''.join(random.choice(letters) for i in range(length))
+
+
+redis_instance = redis.StrictRedis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, db=0)
