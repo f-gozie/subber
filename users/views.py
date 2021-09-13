@@ -17,7 +17,9 @@ from rest_framework.status import (
 
 from .models import User
 from .serializers import UserSerializer
+from services.notification.sendgrid import send_email
 from utils import APISuccess, APIFailure
+from utils.helpers import generate_otp
 
 
 class SignUpView(APIView):
@@ -27,6 +29,9 @@ class SignUpView(APIView):
 	def post(self, request):
 		serializer = UserSerializer(data=request.data, context={'request':request})
 		if serializer.is_valid():
+			email = serializer.validated_data.get('email')
+			otp_code = generate_otp(4)
+			send_email(to=email, otp_code=otp_code)
 			user = serializer.save()
 			if user:
 				token = Token.objects.create(user=user)

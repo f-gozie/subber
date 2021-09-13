@@ -13,3 +13,8 @@ def generate_public_id(parent, key, length=8):
 		return generate_public_id(parent, key)
 
 	return value
+
+
+def generate_otp(length=4):
+	letters = string.ascii_uppercase
+	return ''.join(random.choice(letters) for i in range(length))
