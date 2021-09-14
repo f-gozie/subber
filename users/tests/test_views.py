@@ -235,5 +235,31 @@ class VerifyEmailViewTest(APITestCase):
 		self.assertEqual(response.status_code, 200)
 		self.assertEqual(response.data['message'], 'Email address verified successfully')
 
+	def test_invalid_otp_code(self):
+		'''
+			Test Case: Fail requests with invalid OTP code
+			Expected Result: 400 status code with proper error message
+		'''
+		data = {
+			"otp": "ABCD"
+		}
+		self.client.force_authenticate(self.user)
+		response = self.client.post(self.url, data)
 
+		self.assertEqual(response.status_code, 400)
+		self.assertEqual(response.data['message'], 'Invalid OTP code')
 
+	def test_xpired_otp_code(self):
+		'''
+			Test Case: Fail requests if OTP code has expired
+			Expected Result: 400 status code with proper error message
+		'''
+		data = {
+			"otp": "ABCD"
+		}
+		redis_instance.delete(self.user.email)
+		self.client.force_authenticate(self.user)
+		response = self.client.post(self.url, data)
+
+		self.assertEqual(response.status_code, 400)
+		self.assertEqual(response.data['message'], 'OTP code expired or invalid')
