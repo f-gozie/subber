@@ -8,6 +8,8 @@ from rest_framework.authtoken.models import Token
 from users.models import User
 from accounts.models import Account
 
+from utils.helpers import generate_otp, redis_instance
+
 
 class LoginViewTest(APITestCase):
 
@@ -127,6 +129,13 @@ class CreateUsernameViewTest(APITestCase):
 		cls.user = User.objects.create_user(**cls.user_data)
 		cls.url = reverse('users:create_username')
 
+	# def test_email_otp_sent(self):
+	# 	'''
+	# 		Test Case: Check if email is sent successfully
+	# 	'''
+	# 	proper_url =
+
+
 	def test_username_creation(self):
 		'''
 			Test Case: Create username for existing user
@@ -179,3 +188,52 @@ class CreateUsernameViewTest(APITestCase):
 
 		self.assertEqual(response.status_code, 400)
 		self.assertEqual(response.data['message'], "There is already a user with this username")
+
+class VerifyEmailViewTest(APITestCase):
+
+	@classmethod
+	def setUpTestData(cls):
+		cls.user_data = {
+			"email": "testcase@gmail.com",
+			"password": "testcase123",
+			"phone_number": "08000000010"
+		}
+		cls.user = User.objects.create_user(**cls.user_data)
+		cls.otp = generate_otp(4)
+		redis_instance.hmset(cls.user.email, {'otp': cls.otp})
+		redis_instance.expire(cls.user.email, 300)
+		cls.url = reverse('users:verify_email')
+
+	def test_email_already_verified(self):
+		'''
+			Test Case: Try to verify the email of an already an already email-verified user
+			Expected Result: 400 status code with proper error message
+		'''
+		data = {
+			"otp": 'ABCD'
+		}
+		self.client.force_authenticate(self.user)
+		self.user.email_verified = True
+		response = self.client.post(self.url, data)
+
+		self.assertEqual(response.status_code, 400)
+		self.assertEqual(response.data['message'], 'Your email is already verified')
+
+	def test_email_verified_successful(self):
+		'''
+			Test Case: Verify email address with provided otp code
+			Expected Result: 200 status code with proper success message
+		'''
+		redis_otp = redis_instance.hmget(self.user.email, 'otp')
+		proper_otp = str(redis_otp[0].decode('utf-8'))
+		data = {
+			"otp": proper_otp
+		}
+		self.client.force_authenticate(self.user)
+		response = self.client.post(self.url, data)
+
+		self.assertEqual(response.status_code, 200)
+		self.assertEqual(response.data['message'], 'Email address verified successfully')
+
+
+

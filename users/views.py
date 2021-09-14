@@ -139,6 +139,11 @@ class VerifyEmailView(APIView):
 
 	def post(self, request):
 		otp_code = request.data.get('otp')
+		if not otp_code:
+			return APIFailure(
+				"Please input an OTP code",
+				HTTP_400_BAD_REQUEST
+			)
 		user = request.user
 		email = user.email
 		if user.email_verified:
