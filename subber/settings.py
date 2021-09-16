@@ -142,3 +142,10 @@ REST_FRAMEWORK = {
 
 REDIS_HOST = config('REDIS_HOST')
 REDIS_PORT = config('REDIS_PORT', cast=int)
+
+SESSION_ENGINE = 'redis_sessions.session'
+SESSION_REDIS = {
+    'host': 'localhost',
+    'port': 6379,
+    'db': 0,
+}

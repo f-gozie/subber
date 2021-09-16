@@ -19,7 +19,7 @@ from .models import User
 from .serializers import UserSerializer
 from services.notification.sendgrid import send_email
 from utils import APISuccess, APIFailure
-from utils.helpers import generate_otp, redis_instance
+from utils.helpers import generate_otp
 
 class ResendOTPView(APIView):
 	permission_classes = (IsAuthenticated, )
@@ -33,8 +33,8 @@ class ResendOTPView(APIView):
 			)
 		email = user.email
 		otp_code = generate_otp(4)
-		redis_instance.hmset(email, {'otp': otp_code})
-		redis_instance.expire(email, 300)
+		request.session[email] = otp_code
+		request.session.set_expiry(300)
 		send_email(to=email, otp_code=otp_code)
 
 		return APISuccess('OTP sent successfully')
@@ -49,8 +49,8 @@ class SignUpView(APIView):
 		if serializer.is_valid():
 			email = serializer.validated_data.get('email')
 			otp_code = generate_otp(4)
-			redis_instance.hmset(email, {'otp': otp_code})
-			redis_instance.expire(email, 300)
+			request.session[email] = otp_code
+			request.session.set_expiry(300)
 			send_email(to=email, otp_code=otp_code)
 			user = serializer.save()
 			if user:
@@ -153,9 +153,8 @@ class VerifyEmailView(APIView):
 			)
 
 		try:
-			redis_og_otp_code = redis_instance.hmget(email, 'otp')
-			og_otp_code = str(redis_og_otp_code[0].decode('utf-8'))
-			if og_otp_code == otp_code:
+			otp = request.session.get(email)
+			if otp == otp_code:
 				user.email_verified = True
 				user.save()
 				return APISuccess(
