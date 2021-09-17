@@ -206,14 +206,6 @@ class VerifyEmailViewTest(APITestCase):
 		# redis_instance.expire(cls.user.email, 300)
 		cls.url = reverse('users:verify_email')
 
-	# def clear_session(self):
-	# 	self.client.session.flush()
-
-	# @classmethod
-	# def tearDownClass(cls):
-	# 	cls.clear_session()
-
-	@skip('Ignore this bad boy')
 	def test_email_already_verified(self):
 		'''
 			Test Case: Try to verify the email of an already an already email-verified user
@@ -229,17 +221,16 @@ class VerifyEmailViewTest(APITestCase):
 		self.assertEqual(response.status_code, 400)
 		self.assertEqual(response.data['message'], 'Your email is already verified')
 
-	@skip('Ignore this bad boy')
 	def test_email_verified_successful(self):
 		'''
 			Test Case: Verify email address with provided otp code
 			Expected Result: 200 status code with proper success message
 		'''
 		# store key in session first
-		self.client.session[self.user.email] = self.otp
-		self.client.session.save()
-		print(f'\n{self.client.session.get(self.user.email)}\n')
-		self.client.session.set_expiry(300)
+		session = self.client.session
+		session[self.user.email] = self.otp
+		session.save()
+		session.set_expiry(300)
 
 		# retrieve key from session
 		otp = self.client.session.get(self.user.email)
@@ -255,7 +246,6 @@ class VerifyEmailViewTest(APITestCase):
 		self.assertEqual(response.status_code, 200)
 		self.assertEqual(response.data['message'], 'Email address verified successfully')
 
-	@skip('Ignore this bad boy')
 	def test_invalid_otp_code(self):
 		'''
 			Test Case: Fail requests with invalid OTP code
@@ -270,7 +260,7 @@ class VerifyEmailViewTest(APITestCase):
 		self.assertEqual(response.status_code, 400)
 		self.assertEqual(response.data['message'], 'Invalid OTP code')
 
-	@skip('Ignore this bad boy')
+	@skip("Ignore this bad boy that refuses to run")
 	def test_xpired_otp_code(self):
 		'''
 			Test Case: Fail requests if OTP code has expired
@@ -279,7 +269,9 @@ class VerifyEmailViewTest(APITestCase):
 		data = {
 			"otp": "ABCD"
 		}
-		# del self.client.session[self.user.email]
+		del self.client.session
+		self.client.session.flush()
+		print(self.client.session.get(self.user.email))
 		# redis_instance.delete(self.user.email)
 		self.client.force_authenticate(self.user)
 		response = self.client.post(self.url, data)
